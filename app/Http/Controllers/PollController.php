@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\PollVotesUpdated;
 use App\Http\Requests\StorePollRequest;
 use App\Http\Requests\VoteRequest;
 use App\Models\Choice;
@@ -14,19 +15,19 @@ use Illuminate\Http\Response;
 
 class PollController extends Controller
 {
-    //
-    // GET /polls
-    // - Retrieve all polls
-    //
+    /*
+     * GET /polls
+     * Retrieve all polls
+     */
     public function index(): Collection
     {
         return Poll::with('choices')->get();
     }
 
-    //
-    // POST /polls
-    // - Store a new poll
-    //
+    /*
+     * POST /polls
+     * Store a new poll
+     */
     public function store(StorePollRequest $request): Poll
     {
         $poll = Poll::create($request->validated());
@@ -44,40 +45,40 @@ class PollController extends Controller
         return $poll->load('choices');
     }
 
-    //
-    // GET /polls/{id}
-    // - Retrieve a single poll
-    //
+    /*
+     * GET /polls/{id}
+     * Retrieve a single poll
+     */
     public function show(Poll $poll): Model
     {
         return $poll->load('choices');
     }
 
-    //
-    // PUT|PATCH /polls/{id}
-    // - Update a poll's information
-    //
+    /*
+     * PUT|PATCH /polls/{id}
+     * Update a poll's information
+     */
     public function update(Request $request, Poll $poll): Response
     {
         throw new AuthorizationException('Not implemented');
     }
 
-    //
-    // DELETE /polls/{id}
-    // - Delete a poll
-    //
+    /*
+     * DELETE /polls/{id}
+     * Delete a poll
+     */
     public function destroy(Poll $poll): Response
     {
         throw new AuthorizationException('Not implemented');
     }
 
-    //
-    // PATCH /polls/{id}/vote
-    // - Cast some votes on a poll
-    //
+    /*
+     * PATCH /polls/{id}/vote
+     * Cast some votes on a poll
+     */
     public function vote(VoteRequest $request, Poll $poll): Poll
     {
-        $answers = $request->get('choices');
+        $answers = $request->get('answers');
 
         if ($poll->openEnded) {
             foreach ($answers as $answer) {
@@ -89,6 +90,8 @@ class PollController extends Controller
             $voteCount = $poll->choices()->whereIn('text', $answers)->increment('votes');
             $poll->increment('totalVotes', $voteCount);
         }
+
+        PollVotesUpdated::dispatch($poll->load('choices'));
 
         return $poll->load('choices');
     }
