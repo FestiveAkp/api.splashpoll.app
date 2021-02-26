@@ -23,9 +23,16 @@ class VoteRequest extends FormRequest
      */
     public function rules(): array
     {
+        $poll = $this->route('poll');
+
+        $openEnded = 'string';
+        $multipleChoice = 'numeric|exists:choices,id';
+        $singleChoice = 'size:1';
+        $manyChoices = 'min:1';
+
         return [
-            'answers' => 'required|array',
-            'answers.*' => 'string'
+            'answers' => 'required|array|'.($poll->multipleChoices ? $manyChoices : $singleChoice),
+            'answers.*' => 'required|'.($poll->openEnded ? $openEnded : $multipleChoice)
         ];
     }
 }

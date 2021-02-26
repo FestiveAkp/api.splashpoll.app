@@ -87,7 +87,7 @@ class PollController extends Controller
             $poll->increment('totalVotes', count($answers));
         }
         else {
-            $voteCount = $poll->choices()->whereIn('text', $answers)->increment('votes');
+            $voteCount = $poll->choices()->whereIn('id', $answers)->increment('votes');
             $poll->increment('totalVotes', $voteCount);
         }
 
