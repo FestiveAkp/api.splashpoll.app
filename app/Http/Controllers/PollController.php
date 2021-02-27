@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\PollVotesUpdated;
-use App\Http\Requests\StorePollRequest;
+use App\Http\Requests\CreatePollRequest;
 use App\Http\Requests\VoteRequest;
 use App\Models\Choice;
 use App\Models\Poll;
@@ -28,7 +28,7 @@ class PollController extends Controller
      * POST /polls
      * Store a new poll
      */
-    public function store(StorePollRequest $request): Poll
+    public function store(CreatePollRequest $request): Poll
     {
         $poll = Poll::create($request->validated());
 
