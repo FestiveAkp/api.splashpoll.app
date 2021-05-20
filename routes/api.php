@@ -15,6 +15,10 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::prefix('v1')->group(function () {
-    Route::apiResource('polls', PollController::class);
+    Route::apiResource('polls', PollController::class)->except(['update', 'destroy']);
     Route::patch('/polls/{poll}/vote', [PollController::class, 'vote']);
+
+    Route::get('/choices/{id}', function () {
+        return response('authorized!');
+    })->middleware('auth.token');
 });
