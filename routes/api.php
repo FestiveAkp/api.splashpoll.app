@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ChoiceController;
 use App\Http\Controllers\PollController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,8 +18,6 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
     Route::apiResource('polls', PollController::class)->except(['update', 'destroy']);
     Route::patch('/polls/{poll}/vote', [PollController::class, 'vote']);
-
-    Route::get('/choices/{id}', function () {
-        return response('authorized!');
-    })->middleware('auth.token');
+    Route::patch('/polls/{poll}/combine', [PollController::class, 'combine']);
+    Route::apiResource('choices', ChoiceController::class)->only('destroy');
 });

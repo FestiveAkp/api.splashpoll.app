@@ -37,5 +37,5 @@ class Choice extends Model
      *
      * @var array
      */
-    protected $fillable = ['text'];
+    protected $fillable = ['text', 'votes'];
 }

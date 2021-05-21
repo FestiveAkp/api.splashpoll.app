@@ -3,17 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Events\PollVotesUpdated;
+use App\Http\Requests\CombineChoicesRequest;
 use App\Http\Requests\CreatePollRequest;
 use App\Http\Requests\VoteRequest;
 use App\Models\Choice;
 use App\Models\Poll;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class PollController extends Controller
 {
-    /*
-     * GET /polls
-     * Retrieve all polls
+    /**
+     * Retrieve all polls.
      */
     public function index(): JsonResponse
     {
@@ -21,9 +22,8 @@ class PollController extends Controller
         return response()->json($polls);
     }
 
-    /*
-     * POST /polls
-     * Store a new poll
+    /**
+     * Store a new poll.
      */
     public function store(CreatePollRequest $request): JsonResponse
     {
@@ -46,36 +46,62 @@ class PollController extends Controller
         return response()->json($poll->load('choices'))->cookie($key, $value, $duration);
     }
 
-    /*
-     * GET /polls/{id}
-     * Retrieve a single poll
+    /**
+     * Retrieve a single poll.
      */
     public function show(Poll $poll): JsonResponse
     {
         return response()->json($poll->load('choices'));
     }
 
-    /*
-     * PATCH /polls/{id}/vote
-     * Cast some votes on a poll
+    /**
+     * Cast some votes on a poll.
      */
     public function vote(VoteRequest $request, Poll $poll): JsonResponse
     {
-        $answers = $request->get('answers');
+        DB::transaction(function () use ($request, $poll) {
+            $answers = $request->get('answers');
 
-        if ($poll->openEnded) {
-            foreach ($answers as $answer) {
-                $poll->choices()->updateOrCreate(['text' => $answer])->increment('votes');
+            if ($poll->openEnded) {
+                foreach ($answers as $answer) {
+                    $poll->choices()->updateOrCreate(['text' => $answer])->increment('votes');
+                }
+                $poll->increment('totalVotes', count($answers));
             }
-            $poll->increment('totalVotes', count($answers));
-        }
-        else {
-            $voteCount = $poll->choices()->whereIn('id', $answers)->increment('votes');
-            $poll->increment('totalVotes', $voteCount);
-        }
+            else {
+                $voteCount = $poll->choices()->whereIn('id', $answers)->increment('votes');
+                $poll->increment('totalVotes', $voteCount);
+            }
+
+        });
 
         PollVotesUpdated::dispatch($poll->load('choices'));
 
         return response()->json($poll);
+    }
+
+    /**
+     * Combine an array of choices together.
+     */
+    public function combine(CombineChoicesRequest $request, Poll $poll): JsonResponse
+    {
+        DB::transaction(function () use ($request, $poll) {
+            $oldChoices = $poll->choices->whereIn('id', $request->get('choices'));
+
+            $totalVotes = $oldChoices->reduce(function ($carry, $choice) {
+                return $carry + $choice->votes;
+            });
+
+            $poll->choices()->save(new Choice([
+                'text' => $request->get('text'),
+                'votes' => $totalVotes
+            ]));
+
+            foreach ($oldChoices as $choice) {
+                $choice->delete();
+            }
+        });
+
+        return response()->json($poll->load('choices'));
     }
 }
